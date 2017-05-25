@@ -82,3 +82,39 @@ dependencies {
     // Screenshots
     androidTestCompile 'com.squareup.spoon:spoon-client:1.7.1'
 }
+
+// Testobject specific part
+
+apply plugin: 'testobject'
+
+project.ext.resolveProp = { prop ->
+    if (project.hasProperty(prop)) {
+        project.getProperty(prop)
+    } else {
+        ""
+    }
+}
+
+// TODO fill with your account's credentials!
+testobject {
+    baseUrl ""
+    username resolveProp("username")
+    password resolveProp("password")
+    team ""
+    app ""
+    testSuite 7
+    runAsPackage true
+}
+
+tasks.all { task ->
+    if (task.name.equals("testobjectUpload")) {
+        task.doFirst {
+            if (!project.hasProperty("username")) {
+                throw new GradleException("Please specify testobject user with -Pusername=<yourUserName>")
+            }
+            if (!project.hasProperty("password")) {
+                throw new GradleException("Please specify testobject password with -Ppassword=<yourPassword>")
+            }
+        }
+    }
+}

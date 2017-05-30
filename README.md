@@ -1,103 +1,63 @@
-[![Build Status](https://travis-ci.org/sebaslogen/CleanGUITestArchitecture.svg?branch=master)](https://travis-ci.org/sebaslogen/CleanGUITestArchitecture)
+# Bug report example project
 
-# Clean GUI Test Architecture
-Sample project of Android GUI test automation using Espresso, Cucumber and the Page Object Pattern
+This is an example project that uses a custom instrumentation runner.
+We would like to be able to run the device tests of this project in the testobject cloud.
 
-The evolution journey of Android GUI testing
-============
-The code in this repository serves as a support example of all the test solutions discussed in this published article:
+- Version of Gradle Plugin: 2.3.2
+- Version of Gradle: Gradle 3.3
+- Version of Java: 1.8.0_77
+- Version of testobject-gradle plugin: 0.0.43
+- Version of espresso runner: 0.1-alpha
 
-https://medium.com/@sebaslogen/the-evolution-journey-of-android-gui-testing-f65005f7ced8
+We tried to execute the tests using the following methods:
+- testobject-gradle plugin
+- espresso-runner
+- uploading the apks manually to the testobject website
 
-Execute the project
--------
-Open the project in Android Studio and select the gradle task '**connectedCheck**'
+### Expected behavior:
+- The tests run successfully in the cloud
 
-Alternative, from the command line run ```gradlew connectedCheck```
+### Actual behavior:
+- When we tried the gradle plugin and the espresso runner, we got 500 error code.
+- When we tried to upload the APKs manually to the testobject website, the website detected no tests in the uploaded test APK, therefore we could not run our tests
 
-Cucumber supports **filtering execution of test scenarios with tags** (i.e. @login-scenarios). To filter by tags you have the following options (which can't be combined):
-- Hard coded tags in annotation ```@CucumberOptions``` inside ```CucumberTestCase.java```
-- Use parameters in command line like ```./gradlew connectedAndroidTest -Ptags="@login-scenarios,@kitkat"```
-- In Android Studio create a new configuration of type `Android Tests` and under the `Extra options` add something like `-e tags @login-scenarios,@kitkat`
 
-More information about how to use and combine [Cucumber tags here](https://github.com/cucumber/cucumber/wiki/Tags).
+## Details of the example project
 
-_Note: Make sure to connect a phone to the computer or start an emulator before running the tests._
+Please check app/build.gradle for the configuration details.
 
-In a nutshell
--------
-The sample test code can be summarized in these three elements:
+To run the tests locally:
+./gradlew app:connectedCheck
 
-1- Feature file describing the test scenario in English:
-```gherkin
-@ScenarioId("MyApp-135") @login-scenarios
-Scenario: User can login with valid user name and password
-    Given I see the login page
-    When I login with user name "Sebas" and password "passion"
-    Then I see the welcome page
-    And the title is "Welcome Sebas"
+To run the tests in cloud:
+./gradlew app:testobjectUpload -Pusername=yourTestObjUser -Ppassword=yourTestObjPassword
+
+We would expect this command to complete successfully, instead we get an error:
+```* What went wrong:
+   Execution failed for task ':app:testobjectUpload'.
+   > HTTP 500 Internal Server Error
 ```
 
-2- Java glue code to translate English to Java (this is a step definition):
-```java
-@Given("^I see the login page$")
-public void i_see_the_login_page() {
-    mCurrentPage = new LoginPage();
-}
-
-@When("^I login with user name \"(.+)\" and password \"(.+)\"$")
-public void i_login_with_username_and_password(final String userName, final String password) {
-    mCurrentPage = mCurrentPage.is(LoginPage.class).doLogin(userName, password);
-}
-
-@Then("^I see the welcome page$")
-public void i_see_the_welcome_page() {
-    mCurrentPage.is(WelcomePage.class);
-}
-
-@And("^the title is \"(.+)\"$")
-public void the_title_is(final String title) {
-    mCurrentPage.is(WelcomePage.class).checkTitle(title);
-}
+We also tried to run the tests using the espressorunner with the command below,but we got the same result:
+```
+java -jar espressorunner-0.1.jar \
+    --app app/build/outputs/apk/app-debug.apk \
+    --test app/build/outputs/apk/app-debug-androidTest.apk \
+    --username yourTestObjUser \
+    --password yourTestObjPassword \
+    --team yourTeam \
+    --project yourProject \
+    --suite 7 \
+    --runAsPackage \
+    --url yourUrl
 ```
 
-3- Page Object class implementing the interactions between tests and tested application:
-```java
-/**
- * Perform the login and return the next Welcome page/view
- * @param userName Name of the user to login
- * @param password Password of the user to login
- * @return Welcome page/view
- */
-public WelcomePage doLogin(String userName, String password) {
-    onView(withId(R.id.username)).perform(typeText(userName));
-    onView(withId(R.id.password)).perform(typeText(password), closeSoftKeyboard());
-    onView(withId(R.id.login_button)).perform(click());
-    return new WelcomePage();
-}
-```
+When we check the uploaded APKs in the testobject web UI, it says that there are no tests found in the test APK:
+- Suite Tests: Your Espresso APK doesn't contain any tests.
 
-Advanced scenarios
--------
-When the code of your application and tests mature enough you will be doing things like this:
-- A test step from a test scenario that can be reused across multiple tests:
-```gherkin
-    Given I login into premium account
-```
-- The step definition describes a lot of steps that need to happen to perform the requested action:
-```java
-@Given("^I login into premium account$")
-public void i_log_in_to_premium() {
-    mCurrentPage = mCurrentPage
-      .is(MainPage.class).openMenu()
-      .is(MenuPage.class).selectMenuItem("Accounts")
-      .is(AccountsPage.class).selectNewAccountLogin()
-      .is(LoginPage.class).doLogin()
-      .is(AgreementPage.class).agreeToPrivacyInformation();
-}
-```
-This step definition still hides most of the implementation details inside the Page Objects that contain the actual how-to communicate with the tested application.
+We deliberately enabled the runAsPackage parameter in the testobject configuration, because we thought that it should solve the issue as the doc says from https://github.com/testobject/testobject-gradle-plugin:
+- runAsPackage true // This is a new feature we recently brought. If you are using custom runners and doing internal filterings we recommend you to use it like this. If not this option can be deleted or set as false
 
-License
--------
-This content is released under the MIT License: http://opensource.org/licenses/MIT
+---
+
+Forked from: https://github.com/sebaslogen/CleanGUITestArchitecture
